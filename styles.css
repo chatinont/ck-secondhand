@@ -545,24 +545,16 @@ a {
   box-shadow: var(--shadow-soft);
 }
 
-.line-link {
-  background-color: #06C755; /* LINE Green */
+.messenger-link {
+  background: linear-gradient(135deg, #006AFF 0%, #A334FA 50%, #FF6968 100%);
   color: #FFFFFF;
+  transition: var(--transition-smooth);
 }
 
-.line-link:hover {
-  background-color: #05A647;
+.messenger-link:hover {
+  opacity: 0.95;
   transform: translateY(-2px);
-}
-
-.ig-link {
-  background: linear-gradient(45deg, #F09433 0%, #E6683C 25%, #DC2743 50%, #CC2366 75%, #BC1888 100%);
-  color: #FFFFFF;
-}
-
-.ig-link:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 106, 255, 0.25);
 }
 
 /* --- Modals (Base Backdrop) --- */
