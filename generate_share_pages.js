@@ -82,7 +82,7 @@ function convertDriveLink(url) {
         id = idMatch[1];
       }
     }
-    if (id) return `https://lh3.googleusercontent.com/d/${id}`;
+    if (id) return `https://lh3.googleusercontent.com/d/${id}=w1200`;
   }
   return trimmedUrl;
 }
@@ -127,7 +127,7 @@ async function fetchFolderFirstImage(folderId) {
     const res = await fetchUrl(`${APPS_SCRIPT_API_URL}?id=${folderId}`);
     const data = JSON.parse(res);
     if (data.status === "success" && data.files && data.files.length > 0) {
-      return `https://lh3.googleusercontent.com/d/${data.files[0].id}`;
+      return `https://lh3.googleusercontent.com/d/${data.files[0].id}=w1200`;
     }
   } catch (e) {
     console.error(`Error fetching folder first image for ${folderId}:`, e.message);
@@ -162,6 +162,10 @@ async function run() {
     const idxDescription = getHeaderIndex(["description", "รายละเอียดสินค้า", "รายละเอียดเพิ่มเติม", "รายละเอียด", "ข้อมูลสินค้า"]);
     const idxImage = getHeaderIndex(["image", "รูปหลัก", "รูปภาพ"]);
     const idxCategory = getHeaderIndex(["category", "หมวดหมู่", "ประเภท"]);
+    const idxCondition = getHeaderIndex(["condition", "สภาพสินค้าภายนอก", "สภาพ"]);
+    const idxUsage = getHeaderIndex(["usage", "การใช้งาน"]);
+    const idxWarranty = getHeaderIndex(["warranty", "ประกัน"]);
+    const idxAccessories = getHeaderIndex(["accessories", "อุปกรณ์ที่จะได้รับ", "อุปกรณ์"]);
 
     const categoryCovers = new Map();
 
@@ -189,8 +193,25 @@ async function run() {
       const id = parseInt(rawId.replace(/[^0-9]/g, "")) || i;
       const title = row[idxTitle].trim();
       
-      let description = idxDescription !== -1 && row[idxDescription] ? row[idxDescription].trim() : "สินค้ามือสองสภาพดี คัดสรรพิเศษ";
-      if (description === "-" || description === "") description = "สินค้ามือสองสภาพดี คัดสรรพิเศษ";
+      const condition = idxCondition !== -1 && row[idxCondition] ? row[idxCondition].trim() : "";
+      const usage = idxUsage !== -1 && row[idxUsage] ? row[idxUsage].trim() : "";
+      const warranty = idxWarranty !== -1 && row[idxWarranty] ? row[idxWarranty].trim() : "";
+      const accessories = idxAccessories !== -1 && row[idxAccessories] ? row[idxAccessories].trim() : "";
+      const rawDesc = idxDescription !== -1 && row[idxDescription] ? row[idxDescription].trim() : "";
+
+      // สร้างคำอธิบาย Meta Description แบบละเอียดเพื่อให้บอตแชร์ดึงรายละเอียดไปโชว์ใน Card พรีวิว
+      let metaDescParts = [];
+      if (condition && condition !== "-") metaDescParts.push(`สภาพ: ${condition}`);
+      if (usage && usage !== "-") metaDescParts.push(`การใช้งาน: ${usage}`);
+      if (warranty && warranty !== "-") metaDescParts.push(`ประกัน: ${warranty}`);
+      if (accessories && accessories !== "-") metaDescParts.push(`อุปกรณ์: ${accessories}`);
+      
+      let description = metaDescParts.join(" | ");
+      if (!description) {
+        description = rawDesc && rawDesc !== "-" ? rawDesc : "สินค้ามือสองสภาพดี คัดสรรพิเศษ";
+      } else if (rawDesc && rawDesc !== "-") {
+        description = `${description} | ${rawDesc}`;
+      }
       
       const rawImage = row[idxImage].trim();
 
@@ -245,7 +266,8 @@ async function run() {
   
   <!-- Redirect ไปยังหน้าแรกพร้อม Hash ID ของสินค้า -->
   <script>
-    window.location.replace("../../#product-${id}");
+    const base = window.location.href.split('/p/')[0];
+    window.location.replace(base + '/#product-${id}');
   </script>
   <meta http-equiv="refresh" content="0;url=../../#product-${id}">
 </head>

@@ -442,7 +442,7 @@ async function fetchFolderImages(folderId) {
     const data = await response.json();
     if (data.status === "success" && data.files) {
       // แปลงไฟล์ภาพทั้งหมดในโฟลเดอร์ให้เป็น direct link
-      const folderImages = data.files.map(file => `https://lh3.googleusercontent.com/d/${file.id}`);
+      const folderImages = data.files.map(file => `https://lh3.googleusercontent.com/d/${file.id}=w1000`);
 
       // บันทึก Cache ลงเครื่อง
       localStorage.setItem(cacheKey, JSON.stringify(folderImages));
@@ -481,7 +481,7 @@ function convertDriveLink(url) {
       }
     }
     if (id) {
-      return `https://lh3.googleusercontent.com/d/${id}`;
+      return `https://lh3.googleusercontent.com/d/${id}=w1000`;
     }
   }
   return trimmedUrl;
