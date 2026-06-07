@@ -24,6 +24,49 @@ function fetchUrl(url) {
   });
 }
 
+// ฟังก์ชันดาวน์โหลดและบันทึกไฟล์ภาพจาก URL ลงในเครื่อง (รองรับ Redirect)
+function downloadImage(url, destPath) {
+  return new Promise((resolve, reject) => {
+    function get(currentUrl) {
+      https.get(currentUrl, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          get(res.headers.location);
+          return;
+        }
+        if (res.statusCode !== 200) {
+          reject(new Error(`Status Code: ${res.statusCode}`));
+          return;
+        }
+        const fileStream = fs.createWriteStream(destPath);
+        res.pipe(fileStream);
+        fileStream.on('finish', () => {
+          fileStream.close();
+          resolve();
+        });
+        fileStream.on('error', (err) => {
+          fs.unlink(destPath, () => {});
+          reject(err);
+        });
+      }).on('error', (err) => {
+        reject(err);
+      });
+    }
+    get(url);
+  });
+}
+
+// ฟังก์ชันสร้าง slug จากชื่อสินค้าสำหรับลิงก์แชร์ภาษาไทยและอังกฤษ
+function generateSlug(title) {
+  if (!title) return "";
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9\u0e00-\u0e7f\s-]/g, "") // เก็บเฉพาะอังกฤษ ตัวเลข อักษรไทย ช่องว่าง และขีดกลาง
+    .replace(/[\s_]+/g, "-")                     // แปลงช่องว่างและ underscore เป็นขีดกลาง
+    .replace(/-+/g, "-")                         // ยุบขีดกลางซ้ำ
+    .replace(/^-+|-+$/g, "");                    // ตัดหัวท้ายที่เป็นขีดกลาง
+}
+
 // ฟังก์ชันแปลงลิงก์ Google Drive ให้เป็นลิงก์ตรงรูปภาพ
 function convertDriveLink(url) {
   if (!url) return "";
@@ -118,6 +161,9 @@ async function run() {
     const idxTitle = getHeaderIndex(["title", "ชื่อสินค้า", "ชื่อ"]);
     const idxDescription = getHeaderIndex(["description", "รายละเอียดสินค้า", "รายละเอียดเพิ่มเติม", "รายละเอียด", "ข้อมูลสินค้า"]);
     const idxImage = getHeaderIndex(["image", "รูปหลัก", "รูปภาพ"]);
+    const idxCategory = getHeaderIndex(["category", "หมวดหมู่", "ประเภท"]);
+
+    const categoryCovers = new Map();
 
     if (idxTitle === -1 || idxImage === -1) {
       console.error("❌ หัวข้อคอลัมน์ใน Google Sheets ไม่ถูกต้อง (ต้องมี ชื่อสินค้า และ รูปหลัก)");
@@ -147,6 +193,16 @@ async function run() {
       if (description === "-" || description === "") description = "สินค้ามือสองสภาพดี คัดสรรพิเศษ";
       
       const rawImage = row[idxImage].trim();
+
+      // เก็บรูปภาพแรกสุดที่เจอของหมวดหมู่นี้เพื่อนำไปดาวน์โหลดรูปหน้าปกหมวดหมู่แบบ Static
+      const category = idxCategory !== -1 && row[idxCategory] ? row[idxCategory].trim() : "";
+      if (category && rawImage && !rawImage.startsWith("data:")) {
+        const keyCategory = category.toLowerCase();
+        if (!categoryCovers.has(keyCategory)) {
+          categoryCovers.set(keyCategory, { name: category, rawImage: rawImage });
+        }
+      }
+
       let imageLink = convertDriveLink(rawImage);
 
       // จัดการหากเป็นโฟลเดอร์ Google Drive
@@ -166,8 +222,9 @@ async function run() {
         imageLink = "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=600&auto=format&fit=crop";
       }
 
-      // สร้างโฟลเดอร์สำหรับสินค้า ID นั้นๆ
-      const prodDir = path.join(pDir, String(id));
+      // สร้างโฟลเดอร์สำหรับสินค้า โดยใช้ชื่อสินค้าแปลงเป็น Slug (หากชื่อไม่มีตัวอักษรที่แปลงได้จะใช้ ID แทน)
+      const slug = generateSlug(title) || String(id);
+      const prodDir = path.join(pDir, slug);
       fs.mkdirSync(prodDir, { recursive: true });
 
       // โค้ด HTML สำหรับทำหน้า Redirect และใส่ Meta OG Tags
@@ -183,7 +240,7 @@ async function run() {
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description.substring(0, 150)}...">
   <meta property="og:image" content="${imageLink}">
-  <meta property="og:url" content="../../p/${id}/">
+  <meta property="og:url" content="../../p/${slug}/">
   <meta property="og:site_name" content="CK SECONDHAND">
   
   <!-- Redirect ไปยังหน้าแรกพร้อม Hash ID ของสินค้า -->
@@ -201,9 +258,45 @@ async function run() {
       successCount++;
     }
 
-    console.log("------------------------------------------------------");
+    // === ส่วนของการดาวน์โหลดรูปหน้าปกหมวดหมู่มาเก็บในโฟลเดอร์แบบ Static ===
+    console.log("\n4. กำลังดาวน์โหลดรูปหน้าปกหมวดหมู่มาเก็บในโฟลเดอร์แบบ Static...");
+    const categoriesDir = path.join(__dirname, 'categories');
+    if (!fs.existsSync(categoriesDir)) {
+      fs.mkdirSync(categoriesDir, { recursive: true });
+    }
+
+    for (const [keyCategory, data] of categoryCovers.entries()) {
+      let imageLink = convertDriveLink(data.rawImage);
+
+      // จัดการหากเป็นโฟลเดอร์ Google Drive
+      if (data.rawImage.includes("drive.google.com/drive/folders/")) {
+        const folderId = data.rawImage.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+        if (folderId && folderId[1]) {
+          console.log(`- กำลังดึงข้อมูลรูปภาพจากโฟลเดอร์หมวดหมู่ "${data.name}"...`);
+          const fetchedImg = await fetchFolderFirstImage(folderId[1]);
+          if (fetchedImg) {
+            imageLink = fetchedImg;
+          }
+        }
+      }
+
+      if (imageLink && imageLink.startsWith("http")) {
+        console.log(`- กำลังดาวน์โหลดรูปหน้าปกหมวดหมู่ "${data.name}"...`);
+        const destFile = path.join(categoriesDir, `${keyCategory}.jpg`);
+        try {
+          await downloadImage(imageLink, destFile);
+          console.log(`  ✅ บันทึกสำเร็จ: categories/${keyCategory}.jpg`);
+        } catch (err) {
+          console.error(`  ❌ ไม่สามารถดาวน์โหลดหน้าปกหมวดหมู่ "${data.name}":`, err.message);
+        }
+      } else {
+        console.log(`- หมวดหมู่ "${data.name}" ไม่มีรูปภาพที่เหมาะสมสำหรับหน้าปก`);
+      }
+    }
+
+    console.log("\n------------------------------------------------------");
     console.log(`🎉 สร้างหน้าแชร์สำเร็จทั้งหมด ${successCount} รายการ!`);
-    console.log("สามารถนำโฟลเดอร์ 'p' อัปโหลดขึ้นโฮสติ้งพร้อมตัวเว็บเพื่อใช้งานได้ทันที");
+    console.log("สามารถนำโฟลเดอร์ 'p' และ 'categories' อัปโหลดขึ้นโฮสติ้งพร้อมตัวเว็บเพื่อใช้งานได้ทันที");
   } catch (error) {
     console.error("❌ เกิดข้อผิดพลาด:", error.message);
   }

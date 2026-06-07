@@ -256,10 +256,15 @@ function renderLandingCategories() {
     const card = document.createElement("div");
     card.className = "landing-card";
     
-    // จัดการสไตล์พื้นหลัง (รองรับทั้ง URL รูปภาพ และ CSS gradient)
-    const bgStyle = cat.bgImage.startsWith("http") 
-      ? `background-image: url('${cat.bgImage}');` 
-      : `background: ${cat.bgImage};`;
+    // พยายามโหลดรูปหน้าปกแบบ Local จากโฟลเดอร์ categories ก่อน (เช่น categories/เครื่องดนตรี.jpg)
+    // หากยังไม่เคยดาวน์โหลดลงเครื่อง/โฮสต์ ให้ใช้ค่าดั้งเดิมจาก Google Drive/Unsplash/Gradient เป็นตัวสำรอง (Fallback)
+    const localCoverUrl = `categories/${encodeURIComponent(cat.key)}.jpg`;
+    let bgStyle = "";
+    if (cat.bgImage.startsWith("http")) {
+      bgStyle = `background-image: url('${localCoverUrl}'), url('${cat.bgImage}');`;
+    } else {
+      bgStyle = `background-image: url('${localCoverUrl}'), ${cat.bgImage};`;
+    }
 
     card.innerHTML = `
       <div class="landing-card-bg" style="${bgStyle}"></div>
@@ -342,6 +347,18 @@ function getCachedFolderImages(folderId) {
     }
   }
   return null;
+}
+
+// ฟังก์ชันสร้าง slug จากชื่อสินค้าสำหรับลิงก์แชร์ภาษาไทยและอังกฤษ
+function generateSlug(title) {
+  if (!title) return "";
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9\u0e00-\u0e7f\s-]/g, "") // เก็บเฉพาะอังกฤษ ตัวเลข อักษรไทย ช่องว่าง และขีดกลาง
+    .replace(/[\s_]+/g, "-")                     // แปลงช่องว่างและ underscore เป็นขีดกลาง
+    .replace(/-+/g, "-")                         // ยุบขีดกลางซ้ำ
+    .replace(/^-+|-+$/g, "");                    // ตัดหัวท้ายที่เป็นขีดกลาง
 }
 
 // ฟังก์ชันแปลงลิงก์โฟลเดอร์ Google Drive เพื่อหา Folder ID
@@ -989,7 +1006,8 @@ function renderProducts() {
     if (cardShareBtn) {
       cardShareBtn.addEventListener("click", async (e) => {
         e.stopPropagation(); // ป้องกันไม่ให้การกดปุ่มแชร์ไปทับซ้อนกับการคลิกการ์ดเพื่อเปิด Modal
-        const productUrl = `${window.location.origin}${window.location.pathname}p/${product.id}/`;
+        const slug = generateSlug(product.title) || String(product.id);
+        const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
         try {
           await navigator.clipboard.writeText(productUrl);
           showToast(`คัดลอกลิงก์ ${product.title} เรียบร้อยแล้ว!`);
@@ -1112,8 +1130,9 @@ function openProductModal(product, updateHash = true) {
     };
   }
 
-  // สร้าง Product URL สำหรับใช้งานในปุ่มแชร์
-  const productUrl = `${window.location.origin}${window.location.pathname}p/${product.id}/`;
+  // สร้าง Product URL สำหรับใช้งานในปุ่มแชร์ โดยใช้ชื่อสินค้าเป็น Slug
+  const slug = generateSlug(product.title) || String(product.id);
+  const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
 
   // จัดการปุ่มคัดลอกลิงก์
   const modalCopyLinkBtn = document.getElementById("modal-copy-link-btn");
