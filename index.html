@@ -8,6 +8,13 @@
   <!-- SEO Tags -->
   <meta name="description"
     content="แหล่งรวมสินค้ามือสองสภาพนางฟ้า คัดสรรพิเศษโดย CK ของใช้ส่วนตัวคุณภาพดี ส่งต่อในราคามิตรภาพ">
+  
+  <!-- Open Graph / Facebook Share Preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="CK Secondhand - Curated Pre-owned Goods">
+  <meta property="og:description" content="แหล่งรวมสินค้ามือสองสภาพนางฟ้า คัดสรรพิเศษโดย CK ของใช้ส่วนตัวคุณภาพดี ส่งต่อในราคามิตรภาพ">
+  <meta property="og:image" content="https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=1200&h=630&fit=crop">
+  <meta property="og:site_name" content="CK SECONDHAND">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,6 +33,19 @@
       <div class="logo preloader-logo">CK SECONDHAND.</div>
       <div class="preloader-spinner"></div>
       <p class="preloader-text">กำลังโหลดสินค้า...</p>
+    </div>
+  </div>
+
+  <!-- Landing Category Gate -->
+  <div class="landing-category-screen" id="landing-category-screen">
+    <div class="landing-content">
+      <div class="logo landing-logo">CK SECONDHAND.</div>
+      <h1 class="landing-title">เลือกหมวดหมู่ที่ต้องการชม</h1>
+      <p class="landing-subtitle">คัดสรรสินค้ามือสองคุณภาพดี ในราคาพิเศษ</p>
+      <div class="landing-categories-grid" id="landing-categories-grid">
+        <!-- Dynamically generated category cards will be inserted here -->
+      </div>
+      <button class="landing-skip-btn" id="landing-skip-btn">ดูสินค้าทั้งหมด (Browse All)</button>
     </div>
   </div>
 
@@ -174,6 +194,22 @@
               </svg>
               <span>สนใจซื้อ / สอบถามเพิ่มเติม</span>
             </a>
+
+            <div class="modal-share-actions">
+              <button class="secondary-btn share-btn" id="modal-copy-link-btn" title="คัดลอกลิงก์สินค้า">
+                <svg class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+                <span>คัดลอกลิงก์</span>
+              </button>
+              
+              <a href="#" target="_blank" class="secondary-btn facebook-share-btn" id="modal-facebook-share-btn" title="แชร์ลง Facebook">
+                <svg class="icon-small" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"></path>
+                </svg>
+                <span>แชร์ลง Facebook</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

@@ -382,7 +382,6 @@ a {
   transform: scale(1.05);
 }
 
-/* Status overlays on card */
 .product-card-status {
   position: absolute;
   top: 12px;
@@ -396,6 +395,36 @@ a {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   z-index: 2;
 }
+
+/* Floating Share Button on Card */
+.card-share-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: var(--transition-fast);
+}
+
+.card-share-btn:hover {
+  background-color: var(--text-primary);
+  color: #FFFFFF;
+  border-color: var(--text-primary);
+  transform: scale(1.08);
+}
+
 
 .status-available {
   background-color: rgba(79, 109, 84, 0.9);
@@ -940,6 +969,36 @@ a {
   border-color: var(--text-primary);
 }
 
+.modal-share-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.modal-share-actions .secondary-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  transition: var(--transition-fast);
+}
+
+.modal-share-actions .secondary-btn:hover {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+
 /* --- Cart Slide-out Modal --- */
 .cart-modal-card {
   max-width: 480px;
@@ -1189,15 +1248,188 @@ a {
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 0.6;
     transform: scale(0.98);
   }
-
   50% {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* --- Landing Category Screen --- */
+.landing-category-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-primary);
+  z-index: 998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  overflow-y: auto;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.landing-category-screen.fade-out {
+  opacity: 0;
+  transform: scale(1.02);
+  pointer-events: none;
+}
+
+.landing-content {
+  max-width: 1000px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin: auto 0;
+}
+
+.landing-logo {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.landing-title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.landing-subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  max-width: 500px;
+  margin-bottom: 24px;
+}
+
+/* Category Grid */
+.landing-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+/* Category Card */
+.landing-card {
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(26, 26, 24, 0.04);
+  transition: var(--transition-smooth);
+  background-color: #ECEAE4;
+}
+
+.landing-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), background-image 0.6s ease-in-out;
+}
+
+.landing-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-hover);
+}
+
+.landing-card:hover .landing-card-bg {
+  transform: scale(1.08);
+}
+
+/* Dark Overlay on Card */
+.landing-card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.1) 70%, rgba(0, 0, 0, 0) 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* Glassmorphic card label */
+.landing-card-label {
+  background-color: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  padding: 10px 20px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: var(--transition-fast);
+}
+
+.landing-card:hover .landing-card-label {
+  background-color: var(--text-primary);
+  color: #FFFFFF;
+  border-color: var(--text-primary);
+}
+
+/* Skip Button */
+.landing-skip-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 12px 28px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  margin-top: 8px;
+}
+
+.landing-skip-btn:hover {
+  background-color: var(--text-primary);
+  border-color: var(--text-primary);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+  .landing-categories-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .landing-logo {
+    font-size: 1.8rem;
+  }
+  .landing-title {
+    font-size: 1.6rem;
   }
 }

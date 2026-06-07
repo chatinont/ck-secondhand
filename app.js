@@ -149,6 +149,15 @@ const APPS_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbwaM_b-3BVx
 // ใส่ Facebook Page Username สำหรับลิงก์ Messenger (m.me/username)
 const FACEBOOK_PAGE_USERNAME = "ck2hand";
 
+// กำหนดรูปภาพหน้าปกหมวดหมู่แบบกำหนดเอง (ถ้าต้องการฟิกซ์รูปถาวร สามารถใส่ลิงก์รูปตรงที่นี่ได้ เช่น "https://example.com/image.jpg")
+// หากเว้นว่างไว้เป็น "" ระบบจะดึงรูปสินค้าจริงชิ้นแรกสุดของหมวดหมู่นั้นๆ มาแสดงผลอัตโนมัติ
+const CUSTOM_CATEGORY_IMAGES = {
+  "งานพิมพ์": "",
+  "ของใช้ในบ้าน": "",
+  "เครื่องดนตรี": "",
+  "สัตว์เลี้ยง": ""
+};
+
 // --- คีย์ในการจัดเก็บ Cache สำหรับ LocalStorage ---
 const PRODUCTS_CACHE_KEY = "ck_products_data_cache";
 const PRODUCTS_CACHE_TIME_KEY = "ck_products_data_cache_time";
@@ -165,6 +174,125 @@ function dismissPreloader() {
       preloader.remove();
     }, 500);
   }
+}
+
+// ฟังก์ชันปิดหน้าต่างเลือกหมวดหมู่ตอนเริ่มต้น
+function dismissLandingScreen(animate = true) {
+  const screen = document.getElementById("landing-category-screen");
+  if (!screen) return;
+  if (animate) {
+    screen.classList.add("fade-out");
+    setTimeout(() => {
+      screen.style.display = "none";
+    }, 600);
+  } else {
+    screen.style.display = "none";
+    screen.classList.add("fade-out");
+  }
+}
+
+// ฟังก์ชันเปิดหน้าต่างเลือกหมวดหมู่
+function showLandingScreen() {
+  const screen = document.getElementById("landing-category-screen");
+  if (!screen) return;
+  screen.style.display = "flex";
+  void screen.offsetHeight; // Force reflow
+  screen.classList.remove("fade-out");
+}
+
+// ฟังก์ชันสร้างหน้าหมวดหมู่ที่หน้าแรกแบบไดนามิก
+function renderLandingCategories() {
+  const grid = document.getElementById("landing-categories-grid");
+  if (!grid) return;
+
+  const uniqueCategories = [];
+  const seenCategories = new Set();
+
+  products.forEach(product => {
+    if (product.category && product.category.trim() !== "") {
+      const displayCategory = product.category.trim();
+      const keyCategory = displayCategory.toLowerCase();
+
+      if (!seenCategories.has(keyCategory)) {
+        seenCategories.add(keyCategory);
+
+        // แผนที่ภาพหน้าปกพรีเมียมสำหรับการรอโหลดภาพจริงหรือใช้ทดแทน
+        const premiumPlaceholders = {
+          "งานพิมพ์": "https://images.unsplash.com/photo-1615915468538-0fbd857888ca?q=80&w=600&auto=format&fit=crop", // high-end office/printer
+          "ของใช้ในบ้าน": "https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=600&auto=format&fit=crop", // luxury minimal room
+          "เครื่องดนตรี": "https://images.unsplash.com/photo-1511192336575-5a79af67a629?q=80&w=600&auto=format&fit=crop", // aesthetic instruments
+          "สัตว์เลี้ยง": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=600&auto=format&fit=crop", // clean pet photography
+          "photography": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=600&auto=format&fit=crop",
+          "apparel": "https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=600&auto=format&fit=crop",
+          "tech": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=600&auto=format&fit=crop",
+          "home": "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?q=80&w=600&auto=format&fit=crop",
+          "music": "https://images.unsplash.com/photo-1539625318637-3dd3a3cf6206?q=80&w=600&auto=format&fit=crop"
+        };
+
+        // ตรวจสอบว่ามีการกำหนดรูปภาพหน้าปกแบบแมนนวลใน CUSTOM_CATEGORY_IMAGES หรือไม่
+        const customImg = CUSTOM_CATEGORY_IMAGES[displayCategory] || CUSTOM_CATEGORY_IMAGES[keyCategory];
+        let bgImg = "";
+
+        if (customImg && customImg.trim() !== "") {
+          bgImg = customImg.trim();
+        } else {
+          // ดึงรูปภาพแรกสุดของสินค้านั้นๆ มาเป็นพื้นหลังการ์ด (หากรูปยังเป็น placeholder จะใช้ภาพสต็อกหรูหราเป็นตัวรอโหลด)
+          const firstProdWithImg = products.find(p => p.category && p.category.toLowerCase() === keyCategory && p.image && !p.image.startsWith("data:"));
+          bgImg = firstProdWithImg ? firstProdWithImg.image : (premiumPlaceholders[keyCategory] || "linear-gradient(135deg, #EDEBE6 0%, #C5A880 100%)");
+        }
+
+        uniqueCategories.push({
+          key: keyCategory,
+          name: displayCategory,
+          bgImage: bgImg
+        });
+      }
+    }
+  });
+
+  grid.innerHTML = "";
+
+  uniqueCategories.forEach(cat => {
+    const card = document.createElement("div");
+    card.className = "landing-card";
+    
+    // จัดการสไตล์พื้นหลัง (รองรับทั้ง URL รูปภาพ และ CSS gradient)
+    const bgStyle = cat.bgImage.startsWith("http") 
+      ? `background-image: url('${cat.bgImage}');` 
+      : `background: ${cat.bgImage};`;
+
+    card.innerHTML = `
+      <div class="landing-card-bg" style="${bgStyle}"></div>
+      <div class="landing-card-overlay">
+        <div class="landing-card-label">${cat.name}</div>
+      </div>
+    `;
+
+    card.addEventListener("click", () => {
+      dismissLandingScreen(true);
+      activeCategory = cat.key;
+
+      // อัปเดตสถานะ Active ของปุ่มฟิลเตอร์ในหน้า Shop
+      const filterBtns = document.querySelectorAll(".filter-btn");
+      filterBtns.forEach(btn => {
+        if (btn.getAttribute("data-category") === cat.key) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      renderProducts();
+
+      // เลื่อนหน้าไปที่ Shop
+      const shopSection = document.getElementById("shop");
+      if (shopSection) {
+        shopSection.scrollIntoView({ behavior: "smooth" });
+      }
+    });
+
+    grid.appendChild(card);
+  });
 }
 
 // ฟังก์ชันบันทึกข้อมูลสินค้าลง Cache
@@ -504,6 +632,23 @@ function preloadImage(url) {
   });
 }
 
+// ฟังก์ชันโหลดรูปสินค้าทั้งหมดล่วงหน้าในเบื้องหลัง
+function preloadAllProductImages() {
+  if (!products || !Array.isArray(products)) return;
+  products.forEach(product => {
+    if (product.image && !product.image.startsWith("data:")) {
+      preloadImage(product.image);
+    }
+    if (product.images && Array.isArray(product.images)) {
+      product.images.forEach(imgUrl => {
+        if (imgUrl && !imgUrl.startsWith("data:")) {
+          preloadImage(imgUrl);
+        }
+      });
+    }
+  });
+}
+
 // ฟังก์ชันโหลดข้อมูลสินค้าจาก Google Sheets (รองรับระบบ LocalStorage Caching & Background update)
 async function loadProductsData() {
   foldersToUpdateInBackground = []; // เคลียร์คิวเดิมทุกครั้งที่โหลดข้อมูลใหม่
@@ -523,9 +668,11 @@ async function loadProductsData() {
         
         // Render UI จาก Cache ทันทีเพื่อให้ผู้ใช้ไม่ต้องรอ
         renderCategoryFilters();
+        renderLandingCategories();
         renderProducts();
         handleHashRoute();
         
+        preloadAllProductImages();
         dismissPreloader();
       }
     } catch (e) {
@@ -540,8 +687,11 @@ async function loadProductsData() {
     saveProductsToCache(products);
     
     renderCategoryFilters();
+    renderLandingCategories();
     renderProducts();
     handleHashRoute();
+    
+    preloadAllProductImages();
     dismissPreloader();
     return;
   }
@@ -564,8 +714,11 @@ async function loadProductsData() {
       if (!hasCache || hasChanged) {
         products = freshProducts;
         renderCategoryFilters();
+        renderLandingCategories();
         renderProducts();
         handleHashRoute();
+        
+        preloadAllProductImages();
         
         // หากผู้ใช้เปิดดูรายละเอียด Modal อยู่ ให้อัปเดตรายละเอียดสินค้าใน Modal ด้วย
         if (currentProduct) {
@@ -594,8 +747,11 @@ async function loadProductsData() {
       console.log("No cache available. Falling back to mock database.");
       products = [...mockProducts].filter(p => p.status !== "hide" && p.status !== "hidden" && p.status !== "ซ่อน");
       renderCategoryFilters();
+      renderLandingCategories();
       renderProducts();
       handleHashRoute();
+      
+      preloadAllProductImages();
     }
   } finally {
     dismissPreloader();
@@ -624,6 +780,9 @@ async function updateFolderImagesBackground(updates) {
         if (folderImages.length > 0) {
           product.image = folderImages[0];
           product.images = folderImages;
+          
+          // โหลดรูปภาพทั้งหมดในโฟลเดอร์นี้ล่วงหน้าเข้า cache เบื้องหลัง
+          folderImages.forEach(imgUrl => preloadImage(imgUrl));
         } else if (product.image === IMAGE_LOADING_PLACEHOLDER) {
           // หากไม่มีรูปเลย และของเดิมยังเป็นตัวโหลด ให้เปลี่ยนเป็นรูป "ไม่พบรูปภาพ"
           product.image = IMAGE_FAILED_PLACEHOLDER;
@@ -640,6 +799,9 @@ async function updateFolderImagesBackground(updates) {
         if (currentProduct && currentProduct.id === product.id) {
           buildGallery();
         }
+
+        // อัปเดตรูปพื้นหลังในหน้าหมวดหมู่ที่หน้าแรกให้เป็นรูปสินค้าจริง
+        renderLandingCategories();
       }
     } catch (error) {
       console.error(`Error background updating folder ${folderId}:`, error);
@@ -657,6 +819,9 @@ async function updateFolderImagesBackground(updates) {
         if (currentProduct && currentProduct.id === product.id) {
           buildGallery();
         }
+
+        // อัปเดตหน้าหมวดหมู่ที่หน้าแรกแม้โหลดไม่สำเร็จ (เพื่อเคลียร์สถานะ placeholder)
+        renderLandingCategories();
       }
     } finally {
       // อัปเดตตัวนับโปรเกรสสำหรับแอป
@@ -795,6 +960,11 @@ function renderProducts() {
       <div class="product-img-wrapper">
         <img class="product-img" src="${product.image}" alt="${product.title}" loading="lazy">
         <span class="product-card-status status-${product.status}">${statusText}</span>
+        <button class="card-share-btn" title="คัดลอกลิงก์เพื่อแชร์" aria-label="Share product">
+          <svg class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+          </svg>
+        </button>
       </div>
       <div class="product-info-panel">
         <span class="product-category">${product.category}</span>
@@ -814,9 +984,23 @@ function renderProducts() {
       </div>
     `;
 
+    // ดักจับปุ่มแชร์บนการ์ดสินค้า
+    const cardShareBtn = card.querySelector(".card-share-btn");
+    if (cardShareBtn) {
+      cardShareBtn.addEventListener("click", async (e) => {
+        e.stopPropagation(); // ป้องกันไม่ให้การกดปุ่มแชร์ไปทับซ้อนกับการคลิกการ์ดเพื่อเปิด Modal
+        const productUrl = `${window.location.origin}${window.location.pathname}p/${product.id}/`;
+        try {
+          await navigator.clipboard.writeText(productUrl);
+          showToast(`คัดลอกลิงก์ ${product.title} เรียบร้อยแล้ว!`);
+        } catch (err) {
+          console.error("Failed to copy link:", err);
+        }
+      });
+    }
+
     // ดักจับการคลิกที่การ์ดเพื่อเปิดดู Modal รายละเอียดสินค้า
     card.addEventListener("click", (e) => {
-      // ป้องกันไม่ให้เปิดหน้าต่างซ้ำซ้อนถ้าคลิกโดนปุ่มที่ไม่ต้องการ (ถ้ามี)
       openProductModal(product);
     });
 
@@ -860,6 +1044,7 @@ function handleHashRoute() {
       const product = products.find(p => p.id === productId);
       if (product) {
         openProductModal(product, false);
+        dismissLandingScreen(false); // Bypass landing screen instantly
         return;
       }
     }
@@ -915,7 +1100,7 @@ function openProductModal(product, updateHash = true) {
 
     modalContactBuyBtn.onclick = async (e) => {
       // คัดลอกรายละเอียดและลิงก์สินค้าลง Clipboard
-      const productUrl = `${window.location.origin}${window.location.pathname}#product-${product.id}`;
+      const productUrl = `${window.location.origin}${window.location.pathname}p/${product.id}/`;
       const textToCopy = `สวัสดีครับ สนใจสินค้าชิ้นนี้ครับ:\n${product.title}\nราคา: ฿${product.price.toLocaleString()}\nลิงก์สินค้า: ${productUrl}`;
 
       try {
@@ -925,6 +1110,29 @@ function openProductModal(product, updateHash = true) {
         console.error("Failed to copy product details to clipboard:", err);
       }
     };
+  }
+
+  // สร้าง Product URL สำหรับใช้งานในปุ่มแชร์
+  const productUrl = `${window.location.origin}${window.location.pathname}p/${product.id}/`;
+
+  // จัดการปุ่มคัดลอกลิงก์
+  const modalCopyLinkBtn = document.getElementById("modal-copy-link-btn");
+  if (modalCopyLinkBtn) {
+    modalCopyLinkBtn.onclick = async (e) => {
+      e.preventDefault();
+      try {
+        await navigator.clipboard.writeText(productUrl);
+        showToast("คัดลอกลิงก์สินค้าเรียบร้อยแล้ว!");
+      } catch (err) {
+        console.error("Failed to copy link to clipboard:", err);
+      }
+    };
+  }
+
+  // จัดการปุ่มแชร์ลง Facebook
+  const modalFacebookShareBtn = document.getElementById("modal-facebook-share-btn");
+  if (modalFacebookShareBtn) {
+    modalFacebookShareBtn.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`;
   }
 
   // สร้างและจัดการแกลเลอรีรูปภาพ
@@ -1068,10 +1276,53 @@ function setupEventListeners() {
       searchInput.focus();
     }
   });
+
+  // ปุ่ม Skip ในหน้า Category Selection
+  const skipBtn = document.getElementById("landing-skip-btn");
+  if (skipBtn) {
+    skipBtn.addEventListener("click", () => {
+      dismissLandingScreen(true);
+      activeCategory = "all";
+
+      // รีเซ็ตปุ่มฟิลเตอร์
+      const filterBtns = document.querySelectorAll(".filter-btn");
+      filterBtns.forEach(btn => {
+        if (btn.getAttribute("data-category") === "all") {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      renderProducts();
+    });
+  }
+
+  // ลิงก์โลโก้และ Shop เพื่อเปิดหน้าต่างเลือกหมวดหมู่อีกครั้ง
+  const logoLink = document.getElementById("logo-link");
+  if (logoLink) {
+    logoLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      history.replaceState(null, null, window.location.pathname + window.location.search);
+      showLandingScreen();
+    });
+  }
+
+  const shopNavLinks = document.querySelectorAll('.nav-menu a[href="#shop"], .footer-links a[href="#shop"]');
+  shopNavLinks.forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      showLandingScreen();
+    });
+  });
 }
 
 // --- เริ่มต้นโหลดหน้าเว็บ (Initialization) ---
 document.addEventListener("DOMContentLoaded", () => {
+  // หากมี Hash ให้ข้ามหน้าเลือกหมวดหมู่ทันที
+  if (window.location.hash && window.location.hash.startsWith("#product-")) {
+    dismissLandingScreen(false);
+  }
   loadProductsData();
   setupEventListeners();
 });
