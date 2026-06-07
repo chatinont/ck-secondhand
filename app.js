@@ -149,8 +149,33 @@ const APPS_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbwaM_b-3BVx
 // ใส่ Facebook Page Username สำหรับลิงก์ Messenger (m.me/username)
 const FACEBOOK_PAGE_USERNAME = "ck2hand";
 
+// --- คีย์ในการจัดเก็บ Cache สำหรับ LocalStorage ---
+const PRODUCTS_CACHE_KEY = "ck_products_data_cache";
+const PRODUCTS_CACHE_TIME_KEY = "ck_products_data_cache_time";
+
 let products = [];
 let foldersToUpdateInBackground = [];
+
+// ฟังก์ชันช่วยปิด Preloader
+function dismissPreloader() {
+  const preloader = document.getElementById("preloader");
+  if (preloader) {
+    preloader.classList.add("fade-out");
+    setTimeout(() => {
+      preloader.remove();
+    }, 500);
+  }
+}
+
+// ฟังก์ชันบันทึกข้อมูลสินค้าลง Cache
+function saveProductsToCache(data) {
+  try {
+    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(data));
+    localStorage.setItem(PRODUCTS_CACHE_TIME_KEY, Date.now().toString());
+  } catch (e) {
+    console.error("Failed to save products cache to localStorage:", e);
+  }
+}
 
 let totalLoadSteps = 0;
 let currentLoadStep = 0;
@@ -177,7 +202,7 @@ function getCachedFolderImages(folderId) {
   const cacheTimeKey = `${cacheKey}_time`;
   const cachedData = localStorage.getItem(cacheKey);
   const cachedTime = localStorage.getItem(cacheTimeKey);
-  
+
   if (cachedData && cachedTime) {
     try {
       const images = JSON.parse(cachedData);
@@ -202,10 +227,10 @@ function getDriveFolderId(url) {
 // ฟังก์ชัน fetch แบบกำหนดเวลาหมดเขต (Fetch with Timeout) เพื่อกันเว็บค้างกรณี API ช้า
 async function fetchWithTimeout(resource, options = {}) {
   const { timeout = 3000 } = options;
-  
+
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
-  
+
   try {
     const response = await fetch(resource, {
       ...options,
@@ -222,15 +247,15 @@ async function fetchWithTimeout(resource, options = {}) {
 // ฟังก์ชันดึงรายการรูปภาพในโฟลเดอร์ Google Drive ผ่าน Web App API พร้อมระบบ Cache ในตัวเครื่องป้องกันการโดนบล็อก
 async function fetchFolderImages(folderId) {
   if (!APPS_SCRIPT_API_URL || APPS_SCRIPT_API_URL.trim() === "") return [];
-  
+
   const cacheKey = `gdrive_folder_${folderId}`;
   const cacheTimeKey = `${cacheKey}_time`;
   const cacheDuration = 10 * 60 * 1000; // Cache ไว้ 10 นาที เพื่อหลีกเลี่ยงการถูกจำกัดอัตราส่งข้อมูล (Rate Limit) ของ Google
-  
+
   // ตรวจสอบข้อมูล Cache ในเครื่องผู้ใช้
   const cachedData = localStorage.getItem(cacheKey);
   const cachedTime = localStorage.getItem(cacheTimeKey);
-  
+
   if (cachedData && cachedTime) {
     const age = Date.now() - parseInt(cachedTime);
     if (age < cacheDuration) {
@@ -242,7 +267,7 @@ async function fetchFolderImages(folderId) {
       }
     }
   }
-  
+
   try {
     // กำหนดเวลาหมดเขต 4 วินาทีเพื่อให้เวลาทำแอปสคริปต์ทำงานได้เสถียรขึ้น
     const response = await fetchWithTimeout(`${APPS_SCRIPT_API_URL}?id=${folderId}`, { timeout: 4000 });
@@ -250,11 +275,11 @@ async function fetchFolderImages(folderId) {
     if (data.status === "success" && data.files) {
       // แปลงไฟล์ภาพทั้งหมดในโฟลเดอร์ให้เป็น direct link
       const folderImages = data.files.map(file => `https://lh3.googleusercontent.com/d/${file.id}`);
-      
+
       // บันทึก Cache ลงเครื่อง
       localStorage.setItem(cacheKey, JSON.stringify(folderImages));
       localStorage.setItem(cacheTimeKey, Date.now().toString());
-      
+
       return folderImages;
     }
   } catch (e) {
@@ -264,7 +289,7 @@ async function fetchFolderImages(folderId) {
       console.warn(`Fetch failed. Falling back to expired cache for folder: ${folderId}`);
       try {
         return JSON.parse(cachedData);
-      } catch (err) {}
+      } catch (err) { }
     }
   }
   return [];
@@ -374,7 +399,7 @@ function mapCSVRows(csvLines) {
     // ลองหาแบบตรงกันทั้งหมด (Exact Match) ก่อนเพื่อป้องกันคอลัมน์ชนกัน (เช่น 'ราคา' ชนกับ 'ราคาเต็ม')
     const exactIdx = headers.findIndex(h => aliases.some(alias => h === alias));
     if (exactIdx !== -1) return exactIdx;
-    
+
     // หากไม่พบแบบตรงตัว จึงจะหาแบบครอบคลุมบางส่วน (Loose Match)
     return headers.findIndex(h => aliases.some(alias => h.includes(alias)));
   };
@@ -479,40 +504,49 @@ function preloadImage(url) {
   });
 }
 
-// ฟังก์ชันโหลดข้อมูลสินค้าจาก Google Sheets
+// ฟังก์ชันโหลดข้อมูลสินค้าจาก Google Sheets (รองรับระบบ LocalStorage Caching & Background update)
 async function loadProductsData() {
   foldersToUpdateInBackground = []; // เคลียร์คิวเดิมทุกครั้งที่โหลดข้อมูลใหม่
   
+  // 1. ลองอ่านข้อมูลจาก Cache ก่อนเพื่อความรวดเร็วในการแสดงผล (Stale-While-Revalidate)
+  const cachedDataStr = localStorage.getItem(PRODUCTS_CACHE_KEY);
+  const cachedTimeStr = localStorage.getItem(PRODUCTS_CACHE_TIME_KEY);
+  let hasCache = false;
+  
+  if (cachedDataStr && cachedTimeStr) {
+    try {
+      const cachedProducts = JSON.parse(cachedDataStr);
+      if (Array.isArray(cachedProducts) && cachedProducts.length > 0) {
+        products = cachedProducts;
+        hasCache = true;
+        console.log("Loaded products from local cache:", products.length, "items.");
+        
+        // Render UI จาก Cache ทันทีเพื่อให้ผู้ใช้ไม่ต้องรอ
+        renderCategoryFilters();
+        renderProducts();
+        handleHashRoute();
+        
+        dismissPreloader();
+      }
+    } catch (e) {
+      console.error("Error parsing cached products:", e);
+    }
+  }
+
+  // 2. หากไม่ได้ตั้งค่า URL ของ Google Sheet หรือเป็นค่าว่าง ให้โหลดจาก Mock Data
   if (!GOOGLE_SHEET_CSV_URL || GOOGLE_SHEET_CSV_URL.trim() === "") {
     console.log("Using Mock Database fallback: Google Sheets URL is not configured yet.");
     products = [...mockProducts].filter(p => p.status !== "hide" && p.status !== "hidden" && p.status !== "ซ่อน");
-    
-    // ตั้งค่าตัวนับโปรเกรสสำหรับ mock
-    totalLoadSteps = products.length;
-    currentLoadStep = 0;
-    const el = document.querySelector(".preloader-text");
-    if (el) el.textContent = "กำลังโหลดสินค้า... 0%";
-    
-    // โหลดรูปภาพ mock ล่วงหน้า
-    await Promise.all(products.map(async (p) => {
-      await preloadImage(p.image);
-      updateLoadProgress();
-    }));
+    saveProductsToCache(products);
     
     renderCategoryFilters();
     renderProducts();
     handleHashRoute();
-    
-    const preloader = document.getElementById("preloader");
-    if (preloader) {
-      preloader.classList.add("fade-out");
-      setTimeout(() => {
-        preloader.remove();
-      }, 500);
-    }
+    dismissPreloader();
     return;
   }
 
+  // 3. ทำการดึงข้อมูลสดใหม่จาก Google Sheets
   try {
     const response = await fetchWithTimeout(GOOGLE_SHEET_CSV_URL, { timeout: 4000 });
     if (!response.ok) throw new Error("Failed to fetch Google Sheet CSV");
@@ -521,73 +555,69 @@ async function loadProductsData() {
     const parsedProducts = mapCSVRows(csvLines);
 
     if (parsedProducts.length > 0) {
-      // เซ็ตข้อมูลสินค้าที่แมปเรียบร้อยแล้ว (มีรูปในแคชหรือ SVG Loading)
-      products = parsedProducts.filter(p => p.status !== "hide" && p.status !== "hidden" && p.status !== "ซ่อน");
-      console.log("Successfully loaded products list from Google Sheets:", products.length, "items.");
+      const freshProducts = parsedProducts.filter(p => p.status !== "hide" && p.status !== "hidden" && p.status !== "ซ่อน");
+      console.log("Successfully fetched fresh products list from Google Sheets:", freshProducts.length, "items.");
       
-      // ตั้งค่าตัวนับโปรเกรสสำหรับการดึงรูปโฟลเดอร์และการทำพรีโหลด
-      totalLoadSteps = foldersToUpdateInBackground.length + products.length;
-      currentLoadStep = 0;
-      const el = document.querySelector(".preloader-text");
-      if (el) el.textContent = "กำลังโหลดสินค้า... 0%";
-
-      // ดึงรูปภาพจากโฟลเดอร์ Google Drive แบบ staggered (รอจนเสร็จสิ้นเพื่อแสดงพร้อมกัน)
-      if (foldersToUpdateInBackground.length > 0) {
-        await updateFolderImagesBackground([...foldersToUpdateInBackground]);
+      // เปรียบเทียบเพื่อเช็คว่าข้อมูลเปลี่ยนไปจากแคชหรือไม่
+      const hasChanged = JSON.stringify(products) !== JSON.stringify(freshProducts);
+      
+      if (!hasCache || hasChanged) {
+        products = freshProducts;
+        renderCategoryFilters();
+        renderProducts();
+        handleHashRoute();
+        
+        // หากผู้ใช้เปิดดูรายละเอียด Modal อยู่ ให้อัปเดตรายละเอียดสินค้าใน Modal ด้วย
+        if (currentProduct) {
+          const updatedProduct = products.find(p => p.id === currentProduct.id);
+          if (updatedProduct) {
+            openProductModal(updatedProduct, false);
+          }
+        }
       }
       
-      // โหลดรูปภาพจริงทั้งหมดล่วงหน้าเข้า cache ของเบราว์เซอร์ เพื่อให้ขึ้นมาพร้อมกันตอนปิด Preloader
-      await Promise.all(products.map(async (p) => {
-        await preloadImage(p.image);
-        updateLoadProgress();
-      }));
+      // บันทึก Cache ใหม่ลงเครื่อง
+      saveProductsToCache(freshProducts);
+      
+      // อัปเดตรูปจากโฟลเดอร์ Google Drive ในเบื้องหลัง (ไม่ต้อง await เพื่อไม่ให้บล็อกการแสดงผลหน้าแรก)
+      if (foldersToUpdateInBackground.length > 0) {
+        updateFolderImagesBackground([...foldersToUpdateInBackground]);
+      }
     } else {
       throw new Error("No products parsed from CSV");
     }
   } catch (error) {
-    console.error("Error loading Google Sheet CSV, falling back to mock database:", error);
-    products = [...mockProducts].filter(p => p.status !== "hide" && p.status !== "hidden" && p.status !== "ซ่อน");
+    console.error("Error fetching fresh products data:", error);
     
-    totalLoadSteps = products.length;
-    currentLoadStep = 0;
-    const el = document.querySelector(".preloader-text");
-    if (el) el.textContent = "กำลังโหลดสินค้า... 0%";
-    
-    await Promise.all(products.map(async (p) => {
-      await preloadImage(p.image);
-      updateLoadProgress();
-    }));
-  } finally {
-    renderCategoryFilters();
-    renderProducts();
-    handleHashRoute();
-    
-    const preloader = document.getElementById("preloader");
-    if (preloader) {
-      preloader.classList.add("fade-out");
-      setTimeout(() => {
-        preloader.remove();
-      }, 500);
+    // หากดึงข้อมูลล้มเหลวและยังไม่มี Cache อยู่เลย ให้ตกไปใช้ Mock Database แก้ขัด
+    if (!hasCache) {
+      console.log("No cache available. Falling back to mock database.");
+      products = [...mockProducts].filter(p => p.status !== "hide" && p.status !== "hidden" && p.status !== "ซ่อน");
+      renderCategoryFilters();
+      renderProducts();
+      handleHashRoute();
     }
+  } finally {
+    dismissPreloader();
   }
 }
 
 // ฟังก์ชันอัปเดตรูปจากโฟลเดอร์ Google Drive ในเบื้องหลัง แบบ staggered (ดีเลย์ระหว่างคอล)
 async function updateFolderImagesBackground(updates) {
   console.log(`Starting background update for ${updates.length} folders...`);
-  
+
   for (let i = 0; i < updates.length; i++) {
     const { productId, folderId } = updates[i];
-    
+
     // หน่วงเวลา 200ms ในรอบถัดๆ ไป เพื่อไม่ให้ Google Apps Script โดน Concurrent Rate Limit
     if (i > 0) {
       await new Promise(resolve => setTimeout(resolve, 200));
     }
-    
+
     try {
       // fetchFolderImages มีการจัดการ cache และหมดอายุ in ตัวอยู่แล้ว
       const folderImages = await fetchFolderImages(folderId);
-      
+
       // ค้นหาสินค้าตัวนั้นๆ
       const product = products.find(p => p.id === productId);
       if (product) {
@@ -599,13 +629,13 @@ async function updateFolderImagesBackground(updates) {
           product.image = IMAGE_FAILED_PLACEHOLDER;
           product.images = [IMAGE_FAILED_PLACEHOLDER];
         }
-        
+
         // ค้นหาการ์ดสินค้าใน DOM และอัปเดตรูปหลัก
         const cardImg = document.querySelector(`#product-card-${product.id} .product-img`);
         if (cardImg) {
           cardImg.src = product.image;
         }
-        
+
         // หาก Modal รายละเอียดกำลังเปิดและแสดงสินค้าชิ้นนี้อยู่ ให้อัปเดต Gallery ด้วย
         if (currentProduct && currentProduct.id === product.id) {
           buildGallery();
@@ -613,17 +643,17 @@ async function updateFolderImagesBackground(updates) {
       }
     } catch (error) {
       console.error(`Error background updating folder ${folderId}:`, error);
-      
+
       const product = products.find(p => p.id === productId);
       if (product && product.image === IMAGE_LOADING_PLACEHOLDER) {
         product.image = IMAGE_FAILED_PLACEHOLDER;
         product.images = [IMAGE_FAILED_PLACEHOLDER];
-        
+
         const cardImg = document.querySelector(`#product-card-${product.id} .product-img`);
         if (cardImg) {
           cardImg.src = IMAGE_FAILED_PLACEHOLDER;
         }
-        
+
         if (currentProduct && currentProduct.id === product.id) {
           buildGallery();
         }
@@ -680,7 +710,7 @@ function renderCategoryFilters() {
     if (product.category && product.category.trim() !== "") {
       const displayCategory = product.category.trim();
       const keyCategory = displayCategory.toLowerCase();
-      
+
       if (!seenCategories.has(keyCategory)) {
         seenCategories.add(keyCategory);
         uniqueCategories.push({
@@ -700,7 +730,7 @@ function renderCategoryFilters() {
     btn.className = `filter-btn ${activeCategory === cat.key ? "active" : ""}`;
     btn.setAttribute("data-category", cat.key);
     btn.textContent = cat.name;
-    
+
     filterWrapper.appendChild(btn);
   });
 
@@ -772,10 +802,10 @@ function renderProducts() {
         <div class="product-meta-row">
           <div class="product-price-container">
             <span class="product-price">฿${product.price.toLocaleString()}</span>
-            ${product.originalPrice && product.originalPrice > product.price 
-              ? `<span class="product-original-price">฿${product.originalPrice.toLocaleString()}</span>` 
-              : ''
-            }
+            ${product.originalPrice && product.originalPrice > product.price
+        ? `<span class="product-original-price">฿${product.originalPrice.toLocaleString()}</span>`
+        : ''
+      }
           </div>
           <button class="card-cta-btn" ${product.status === "sold" ? "disabled" : ""}>
             ${product.status === "sold" ? "Sold" : "View Details"}
@@ -814,7 +844,7 @@ function showToast(message) {
   toast.classList.remove("active");
   void toast.offsetWidth;
   toast.classList.add("active");
-  
+
   setTimeout(() => {
     toast.classList.remove("active");
   }, 3500);
@@ -834,7 +864,7 @@ function handleHashRoute() {
       }
     }
   }
-  
+
   // ปิดหน้า Modal ถ้าไม่มีการคลิกเลือกสินค้าตาม hash
   if (currentProduct) {
     closeModal(false);
@@ -849,7 +879,7 @@ function openProductModal(product, updateHash = true) {
   modalProductCategory.textContent = product.category;
   modalProductTitle.textContent = product.title;
   modalProductPrice.textContent = `฿${product.price.toLocaleString()}`;
-  
+
   if (product.originalPrice && product.originalPrice > product.price) {
     modalProductOriginalPrice.textContent = `฿${product.originalPrice.toLocaleString()}`;
     modalProductOriginalPrice.style.display = "inline";
@@ -882,12 +912,12 @@ function openProductModal(product, updateHash = true) {
     modalContactBuyBtn.style.pointerEvents = "auto";
     modalContactBuyBtn.style.opacity = "1";
     modalContactBuyBtn.querySelector("span").textContent = "สนใจซื้อ / สอบถามเพิ่มเติม";
-    
+
     modalContactBuyBtn.onclick = async (e) => {
       // คัดลอกรายละเอียดและลิงก์สินค้าลง Clipboard
       const productUrl = `${window.location.origin}${window.location.pathname}#product-${product.id}`;
       const textToCopy = `สวัสดีครับ สนใจสินค้าชิ้นนี้ครับ:\n${product.title}\nราคา: ฿${product.price.toLocaleString()}\nลิงก์สินค้า: ${productUrl}`;
-      
+
       try {
         await navigator.clipboard.writeText(textToCopy);
         showToast("คัดลอกข้อมูลสินค้าเรียบร้อย! สามารถวางส่งในแชทได้ทันที");

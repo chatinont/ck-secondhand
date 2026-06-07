@@ -1,20 +1,30 @@
 /* --- Design System & CSS Variables --- */
 :root {
   /* Colors */
-  --bg-primary: #F7F5F0;     /* Warm Sand / Cream */
-  --bg-secondary: #FFFFFF;   /* Clean White */
-  --text-primary: #1A1A18;   /* Deep Charcoal Black */
-  --text-secondary: #6B6964; /* Muted Olive Grey */
-  --accent: #C5A880;         /* Brass Gold */
-  --accent-hover: #A78C64;   /* Darker Gold */
-  --accent-light: #F2ECE0;   /* Light Gold Tint */
+  --bg-primary: #F7F5F0;
+  /* Warm Sand / Cream */
+  --bg-secondary: #FFFFFF;
+  /* Clean White */
+  --text-primary: #1A1A18;
+  /* Deep Charcoal Black */
+  --text-secondary: #6B6964;
+  /* Muted Olive Grey */
+  --accent: #C5A880;
+  /* Brass Gold */
+  --accent-hover: #A78C64;
+  /* Darker Gold */
+  --accent-light: #F2ECE0;
+  /* Light Gold Tint */
   --border-color: rgba(26, 26, 24, 0.08);
   --border-color-focus: rgba(197, 168, 128, 0.5);
 
   /* Status Colors */
-  --status-available: #4F6D54;  /* Sage Green */
-  --status-reserved: #C89D7C;   /* Terracotta */
-  --status-sold: #A19F9A;       /* Muted Grey */
+  --status-available: #4F6D54;
+  /* Sage Green */
+  --status-reserved: #C89D7C;
+  /* Terracotta */
+  --status-sold: #A19F9A;
+  /* Muted Grey */
 
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.7);
@@ -61,7 +71,10 @@ body {
 }
 
 /* --- Typography --- */
-h1, h2, h3, .logo {
+h1,
+h2,
+h3,
+.logo {
   font-family: var(--font-serif);
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -280,11 +293,13 @@ a {
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 8px;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .filter-wrapper::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
+  /* Chrome/Safari */
 }
 
 .filter-btn {
@@ -378,7 +393,7 @@ a {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   z-index: 2;
 }
 
@@ -639,7 +654,8 @@ a {
   display: flex;
   flex-direction: column;
   background-color: var(--bg-secondary);
-  min-width: 0; /* ป้องกันการขยายขนาดรูปจนไปเบียดฝั่งขวา */
+  min-width: 0;
+  /* ป้องกันการขยายขนาดรูปจนไปเบียดฝั่งขวา */
 }
 
 .modal-image-wrapper {
@@ -767,7 +783,8 @@ a {
   padding: 32px;
   display: flex;
   flex-direction: column;
-  min-width: 0; /* ป้องกันการเบียดเนื้อหา */
+  min-width: 0;
+  /* ป้องกันการเบียดเนื้อหา */
 }
 
 .modal-header {
@@ -841,13 +858,15 @@ a {
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-  background: rgba(197, 168, 128, 0.3); /* Muted Gold */
+  background: rgba(197, 168, 128, 0.3);
+  /* Muted Gold */
   border-radius: 3px;
   transition: var(--transition-fast);
 }
 
 .modal-body::-webkit-scrollbar-thumb:hover {
-  background: var(--accent); /* Solid Gold on Hover */
+  background: var(--accent);
+  /* Solid Gold on Hover */
 }
 
 .detail-row {
@@ -1005,7 +1024,8 @@ a {
 }
 
 .cart-item-remove:hover {
-  color: #D9534F; /* Red */
+  color: #D9534F;
+  /* Red */
 }
 
 .cart-footer {
@@ -1147,8 +1167,10 @@ a {
 .preloader-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(197, 168, 128, 0.15); /* Light Gold tint */
-  border-top-color: var(--accent); /* Brass Gold */
+  border: 3px solid rgba(197, 168, 128, 0.15);
+  /* Light Gold tint */
+  border-top-color: var(--accent);
+  /* Brass Gold */
   border-radius: 50%;
   animation: spin 1s infinite linear;
 }
@@ -1167,10 +1189,13 @@ a {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.6;
     transform: scale(0.98);
   }
+
   50% {
     opacity: 1;
     transform: scale(1);
