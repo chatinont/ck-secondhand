@@ -366,13 +366,22 @@ function getProductShareText(product, productUrl) {
   const originalPriceText = product.originalPrice && product.originalPrice > product.price 
     ? ` (จากราคาปกติ ฿${product.originalPrice.toLocaleString()})` 
     : "";
-  const descText = product.description && product.description !== "-" 
-    ? `\n📝 รายละเอียด: ${product.description}` 
+  const conditionText = product.condition && product.condition !== "-" 
+    ? `\n✨ สภาพ: ${product.condition}` 
+    : "";
+  const usageText = product.usage && product.usage !== "-" 
+    ? `\n⚙️ การใช้งาน: ${product.usage}` 
     : "";
   const warrantyText = product.warranty && product.warranty !== "-" 
-    ? `\n🛡️ การรับประกัน: ${product.warranty}` 
+    ? `\n🛡️ ประกัน: ${product.warranty}` 
     : "";
-  return `🛍️ สินค้า: ${product.title}\n💰 ราคา: ฿${product.price.toLocaleString()}${originalPriceText}${descText}${warrantyText}\n🔗 ลิงก์สินค้า: ${productUrl}`;
+  const accessoriesText = product.accessories && product.accessories !== "-" 
+    ? `\n📦 อุปกรณ์ที่จะได้รับ: ${product.accessories}` 
+    : "";
+  const descText = product.description && product.description !== "-" 
+    ? `\n📝 รายละเอียดเพิ่มเติม: ${product.description}` 
+    : "";
+  return `🛍️ สินค้า: ${product.title}\n💰 ราคา: ฿${product.price.toLocaleString()}${originalPriceText}${conditionText}${usageText}${warrantyText}${accessoriesText}${descText}\n🔗 ลิงก์สินค้า: ${productUrl}`;
 }
 
 // ฟังก์ชันแปลงลิงก์โฟลเดอร์ Google Drive เพื่อหา Folder ID
