@@ -361,6 +361,20 @@ function generateSlug(title) {
     .replace(/^-+|-+$/g, "");                    // ตัดหัวท้ายที่เป็นขีดกลาง
 }
 
+// ฟังก์ชันจัดรูปแบบข้อความรายละเอียดสินค้าและลิงก์สำหรับคัดลอกแชร์
+function getProductShareText(product, productUrl) {
+  const originalPriceText = product.originalPrice && product.originalPrice > product.price 
+    ? ` (จากราคาปกติ ฿${product.originalPrice.toLocaleString()})` 
+    : "";
+  const descText = product.description && product.description !== "-" 
+    ? `\n📝 รายละเอียด: ${product.description}` 
+    : "";
+  const warrantyText = product.warranty && product.warranty !== "-" 
+    ? `\n🛡️ การรับประกัน: ${product.warranty}` 
+    : "";
+  return `🛍️ สินค้า: ${product.title}\n💰 ราคา: ฿${product.price.toLocaleString()}${originalPriceText}${descText}${warrantyText}\n🔗 ลิงก์สินค้า: ${productUrl}`;
+}
+
 // ฟังก์ชันแปลงลิงก์โฟลเดอร์ Google Drive เพื่อหา Folder ID
 function getDriveFolderId(url) {
   if (!url) return null;
@@ -1009,8 +1023,9 @@ function renderProducts() {
         const slug = generateSlug(product.title) || String(product.id);
         const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
         try {
-          await navigator.clipboard.writeText(productUrl);
-          showToast(`คัดลอกลิงก์ ${product.title} เรียบร้อยแล้ว!`);
+          const shareText = getProductShareText(product, productUrl);
+          await navigator.clipboard.writeText(shareText);
+          showToast(`คัดลอกข้อมูลและลิงก์ของสินค้าเรียบร้อยแล้ว!`);
         } catch (err) {
           console.error("Failed to copy link:", err);
         }
@@ -1117,8 +1132,9 @@ function openProductModal(product, updateHash = true) {
     modalContactBuyBtn.querySelector("span").textContent = "สนใจซื้อ / สอบถามเพิ่มเติม";
 
     modalContactBuyBtn.onclick = async (e) => {
-      // คัดลอกรายละเอียดและลิงก์สินค้าลง Clipboard
-      const productUrl = `${window.location.origin}${window.location.pathname}p/${product.id}/`;
+      // คัดลอกรายละเอียดและลิงก์สินค้าลง Clipboard (ใช้ Slug)
+      const slug = generateSlug(product.title) || String(product.id);
+      const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
       const textToCopy = `สวัสดีครับ สนใจสินค้าชิ้นนี้ครับ:\n${product.title}\nราคา: ฿${product.price.toLocaleString()}\nลิงก์สินค้า: ${productUrl}`;
 
       try {
@@ -1134,14 +1150,15 @@ function openProductModal(product, updateHash = true) {
   const slug = generateSlug(product.title) || String(product.id);
   const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
 
-  // จัดการปุ่มคัดลอกลิงก์
+  // จัดการปุ่มคัดลอกรายละเอียดสินค้าและลิงก์
   const modalCopyLinkBtn = document.getElementById("modal-copy-link-btn");
   if (modalCopyLinkBtn) {
     modalCopyLinkBtn.onclick = async (e) => {
       e.preventDefault();
       try {
-        await navigator.clipboard.writeText(productUrl);
-        showToast("คัดลอกลิงก์สินค้าเรียบร้อยแล้ว!");
+        const shareText = getProductShareText(product, productUrl);
+        await navigator.clipboard.writeText(shareText);
+        showToast("คัดลอกข้อมูลและลิงก์สินค้าเรียบร้อยแล้ว!");
       } catch (err) {
         console.error("Failed to copy link to clipboard:", err);
       }
