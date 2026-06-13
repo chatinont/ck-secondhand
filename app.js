@@ -1029,7 +1029,7 @@ function renderProducts() {
     if (cardShareBtn) {
       cardShareBtn.addEventListener("click", async (e) => {
         e.stopPropagation(); // ป้องกันไม่ให้การกดปุ่มแชร์ไปทับซ้อนกับการคลิกการ์ดเพื่อเปิด Modal
-        const slug = generateSlug(product.title) || String(product.id);
+        const slug = String(product.id);
         const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
         try {
           const shareText = getProductShareText(product, productUrl);
@@ -1142,7 +1142,7 @@ function openProductModal(product, updateHash = true) {
 
     modalContactBuyBtn.onclick = async (e) => {
       // คัดลอกรายละเอียดและลิงก์สินค้าลง Clipboard (ใช้ Slug)
-      const slug = generateSlug(product.title) || String(product.id);
+      const slug = String(product.id);
       const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
       const textToCopy = `สวัสดีครับ สนใจสินค้าชิ้นนี้ครับ:\n${product.title}\nราคา: ฿${product.price.toLocaleString()}\nลิงก์สินค้า: ${productUrl}`;
 
@@ -1156,7 +1156,7 @@ function openProductModal(product, updateHash = true) {
   }
 
   // สร้าง Product URL สำหรับใช้งานในปุ่มแชร์ โดยใช้ชื่อสินค้าเป็น Slug
-  const slug = generateSlug(product.title) || String(product.id);
+  const slug = String(product.id);
   const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
 
   // จัดการปุ่มคัดลอกรายละเอียดสินค้าและลิงก์
