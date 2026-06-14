@@ -593,7 +593,8 @@ function mapCSVRows(csvLines) {
     const row = csvLines[i];
     if (row.length < headers.length || !row[idxTitle]) continue;
 
-    const id = idxId !== -1 && row[idxId] ? parseInt(row[idxId]) || i : i;
+    const rawId = idxId !== -1 && row[idxId] ? row[idxId].trim() : String(i);
+    const id = parseInt(rawId.replace(/[^0-9]/g, "")) || i;
     const title = row[idxTitle].trim();
     const category = idxCategory !== -1 && row[idxCategory] ? row[idxCategory].trim() : "All";
     const price = idxPrice !== -1 && row[idxPrice] ? parseFloat(row[idxPrice].replace(/[^0-9.]/g, "")) || 0 : 0;
