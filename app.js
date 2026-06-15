@@ -381,7 +381,7 @@ function getProductShareText(product, productUrl) {
   const descText = product.description && product.description !== "-" 
     ? `\n📝 รายละเอียดเพิ่มเติม: ${product.description}` 
     : "";
-  return `🛍️ สินค้า: ${product.title}\n💰 ราคา: ฿${product.price.toLocaleString()}${originalPriceText}${conditionText}${usageText}${warrantyText}${accessoriesText}${descText}\n🔗 ลิงก์สินค้า: ${productUrl}`;
+  return `🛍️ สินค้า: ${product.title}\n🔗 ลิงก์สินค้า: ${productUrl}\n\n💰 ราคา: ฿${product.price.toLocaleString()}${originalPriceText}${conditionText}${usageText}${warrantyText}${accessoriesText}${descText}\n\nนัดรับได้ที่ ประชาชื่น แจ้งวัฒนะ เมืองทอง ชัยพฤกษ์\nสนใจติดต่อ แยม\n: Tel : 0869068772\nLine ID : 0869068772`;
 }
 
 // ฟังก์ชันแปลงลิงก์โฟลเดอร์ Google Drive เพื่อหา Folder ID
