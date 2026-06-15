@@ -594,7 +594,7 @@ function mapCSVRows(csvLines) {
     if (row.length < headers.length || !row[idxTitle]) continue;
 
     const rawId = idxId !== -1 && row[idxId] ? row[idxId].trim() : String(i);
-    const id = parseInt(rawId.replace(/[^0-9]/g, "")) || i;
+    let id = parseInt(rawId.replace(/[^0-9]/g, "")) || i;
     const title = row[idxTitle].trim();
     const category = idxCategory !== -1 && row[idxCategory] ? row[idxCategory].trim() : "All";
     const price = idxPrice !== -1 && row[idxPrice] ? parseFloat(row[idxPrice].replace(/[^0-9.]/g, "")) || 0 : 0;
@@ -1031,7 +1031,7 @@ function renderProducts() {
       cardShareBtn.addEventListener("click", async (e) => {
         e.stopPropagation(); // ป้องกันไม่ให้การกดปุ่มแชร์ไปทับซ้อนกับการคลิกการ์ดเพื่อเปิด Modal
         const slug = String(product.id);
-        const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
+        const productUrl = `${window.location.origin}${window.location.pathname}#product-${slug}`;
         try {
           const shareText = getProductShareText(product, productUrl);
           await navigator.clipboard.writeText(shareText);
@@ -1144,7 +1144,7 @@ function openProductModal(product, updateHash = true) {
     modalContactBuyBtn.onclick = async (e) => {
       // คัดลอกรายละเอียดและลิงก์สินค้าลง Clipboard (ใช้ Slug)
       const slug = String(product.id);
-      const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
+      const productUrl = `${window.location.origin}${window.location.pathname}#product-${slug}`;
       const textToCopy = `สวัสดีครับ สนใจสินค้าชิ้นนี้ครับ:\n${product.title}\nราคา: ฿${product.price.toLocaleString()}\nลิงก์สินค้า: ${productUrl}`;
 
       try {
@@ -1158,7 +1158,7 @@ function openProductModal(product, updateHash = true) {
 
   // สร้าง Product URL สำหรับใช้งานในปุ่มแชร์ โดยใช้ชื่อสินค้าเป็น Slug
   const slug = String(product.id);
-  const productUrl = `${window.location.origin}${window.location.pathname}p/${slug}/`;
+  const productUrl = `${window.location.origin}${window.location.pathname}#product-${slug}`;
 
   // จัดการปุ่มคัดลอกรายละเอียดสินค้าและลิงก์
   const modalCopyLinkBtn = document.getElementById("modal-copy-link-btn");
